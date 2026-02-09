@@ -1,0 +1,58 @@
+// SCAPS script
+clear all // take a clean start
+load definitionfile Perovskite_TopCell_Shrivastav.def // your def file of the top cell
+action spectrumfile AM1_5G.spe // load the standard AM 1.5G spectrum
+set layer2.thickness 0.336 // perovskite layer thickness in microns
+calculate singleshot // top cell simulation under AM1.5 G spectrum
+get iv xy // for top cell: V is stored in xvector, J in yvector
+get characteristics.jsc yvalue // jsc is stored in yvalue
+set scriptvariable.yvalue yvector[0] // the first calculated J value is in yvalue
+math scalarabs yy // the first calculated |J| value is in yvalue
+// show scriptvariables
+load definitionfile Si_HIT_BottomCell_Shrivastav.def // your def file of the bottom cell
+action spectrumfile 700nm fixed JL.spe // load the filtered spectrum by the top cell
+set layer3.thickness 150 // c-Si layer thickness in microns
+calculate singleshot // bottom cell simulation under filtered spectrum
+get iv zu // for bottom cell: V is stored in uvector, J in zvector
+get characteristics.jsc uvalue // jsc is stored in uvalue
+set scriptvariable.vvalue 0.002 // start varying Jtandem from Jsc(top) + this increment (in mA/cm2)
+math scalarsubtract vvy // starting value for Jtandem
+set scriptvariable.wvalue 0 // stop value for Jtandem
+math filllinear vvector vvalue wvalue 100 // fill vvector = Jtandem with 100 values from start to stop
+// set length of v and w vectors
+set scriptvariable.maxiteration nv
+set scriptvariable.nw nv
+math fillconstant w 0 nw
+// show scriptvariables
+// start the loop: vary Jtandem
+loop start
+// find the voltage of the top cell at this Jtandem (by interpolation); set it in xvalue
+set scriptvariable.yvalue vvector[loopcounter]
+math interpolate xXyY
+// find the voltage of the bottom cell at this Jtandem (by interpolation); set it in zvalue
+set scriptvariable.uvalue vvector[loopcounter]
+math interpolate zZuU
+// do the series connection: add the voltages of top and bottom cell and place the result in xvalue
+math scalaradd xxz
+set scriptvariable.wvector[loopcounter] xvalue // and set this xvalue in wvector
+loop stop
+// set suitable names the vectors, and plot them
+set scriptvariable.xname Vtop (V)
+set scriptvariable.yname Jtop (mA/cm2)
+set scriptvariable.zname Vbottom (V)
+set scriptvariable.uname Jbottom (mA/cm2)
+set scriptvariable.wname Vtandem (V)
+set scriptvariable.vname Jtandem (mA/cm2)
+show scriptvariables
+plot draw wv // the tandem cell J-V
+plot draw xy // the top cell J-V
+plot draw zu // the bottom cell J-V
+// extracting the efficiency parameters of the tandem
+math characteristics.voc xwv
+math characteristics.jsc ywv
+math characteristics.ff zwv
+math characteristics.eta uwv
+math characteristics.vmpp vwv
+math characteristics.jmpp wwv
+show scriptvariables
+

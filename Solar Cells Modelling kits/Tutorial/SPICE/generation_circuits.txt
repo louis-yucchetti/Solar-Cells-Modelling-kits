@@ -1,0 +1,149 @@
+void makeCir(int technology) {
+
+	std::ostringstream filenameaddonstring;
+	filenameaddonstring<<filenameAddon;
+
+	std::ostringstream panelstring;
+	panelstring<<panel;
+
+	cirfilename = "";
+	cirfilename += "module_";
+
+	cirfilename += panelstring.str();
+	cirfilename += filenameaddonstring.str();
+	cirfilename += ".cir";
+
+	FILE * pFileTXT;
+	pFileTXT = fopen(cirfilename.c_str(), "w");
+	if (technology == 1) {
+		fprintf(pFileTXT, "* a-Si Module, %d cells\n", ASI_NUM_CELLS);
+	}
+	if (technology == 2) {
+		fprintf(pFileTXT, "* p-Si Module, %d cells\n",
+		PSI_NUM_STRINGS_PER_PANEL * PSI_CELLS_PER_STRING);
+		fprintf(pFileTXT,
+				"* %d strings of %d cells each, connected in series\n",
+				PSI_NUM_STRINGS_PER_PANEL, PSI_CELLS_PER_STRING);
+		if (has1BypassDiodePerString)
+			fprintf(pFileTXT,
+					"* a bypass diode across each of the %d strings\n",PSI_NUM_STRINGS_PER_PANEL*PANELS_IN_ARRAY);
+	}
+	string fullPathModelCell=inputsPath;
+	fullPathModelCell+=model_cell;
+	fprintf(pFileTXT, ".INCLUDE %s.lib\n", fullPathModelCell.c_str());
+
+
+	//THIS CODE IS GOOD FOR SETTING VARYING PARAMETERS FOR EACH CELL (e.g. temperature)
+//	for (int i = 1; i <= num_cells_total; i++) {
+//		if (i == num_cells_total) {
+//			fprintf(pFileTXT,
+//					"xcell%d 0 %d %d %s params: area=%e j0=%e j02=%e\n", i,
+//					-1 + 2 * (i - 1), 2 * i, model_cell.c_str(), area_cm2, j_0,
+//					j_02);
+//			fprintf(pFileTXT,
+//					"+jsc=%e rs=%e rsh=%e temp=%e isc_coef=%e n1=%e n2=%e\n",
+//					jsc, rs, rsh, temp_c, isc_coef, n1, n2);
+//			fprintf(pFileTXT,
+//					"+cellthickness=%e mobilitylifetime=%e vbi=%e abishop=%e vbr=%e mbishop=%e\n",
+//					iLayerThicknessCm, mobilityLifetimeEff, Vbi, a_bishop, Vbr,
+//					m_bishop);
+//		} else {
+//			fprintf(pFileTXT,
+//					"xcell%d %d %d %d %s params: area=%e j0=%e j02=%e\n", i,
+//					1 + 2 * (i - 1), -1 + 2 * (i - 1), 2 * i,
+//					model_cell.c_str(), area_cm2, j_0, j_02);
+//			fprintf(pFileTXT,
+//					"+jsc=%e rs=%e rsh=%e temp=%e isc_coef=%e n1=%e n2=%e\n",
+//					jsc, rs, rsh, temp_c, isc_coef, n1, n2);
+//			fprintf(pFileTXT,
+//					"+cellthickness=%e mobilitylifetime=%e vbi=%e abishop=%e vbr=%e mbishop=%e\n",
+//					iLayerThicknessCm, mobilityLifetimeEff, Vbi, a_bishop, Vbr,
+//					m_bishop);
+//		}
+//
+//	}
+
+
+	//THIS CODE IS GOOD FOR SETTING IDENTICAL PARAMETERS FOR EACH CELL
+
+	for (int i = 1; i <= num_cells_total; i++) {
+		if (i == num_cells_total) {
+			fprintf(pFileTXT,
+					"xcell%d 0 %d %d %s params: area={areaParam} j0={j0Param} j02={j02Param}\n", i,
+					-1 + 2 * (i - 1), 2 * i, model_cell.c_str());
+			fprintf(pFileTXT,
+					"+jsc={jscParam} rs={rsParam} rsh={rshParam} temp={temp_cParam} isc_coef={isc_coefParam} n1={n1Param} n2={n2Param}\n");
+			fprintf(pFileTXT,
+					"+cellthickness={cellthicknessParam} mobilitylifetime={mobilitylifetimeParam} vbi={vbiParam} abishop={abishopParam} vbr={vbrParam} mbishop={mbishopParam}\n");
+		} else {
+			fprintf(pFileTXT,
+					"xcell%d %d %d %d %s params: area={areaParam} j0={j0Param} j02={j02Param}\n", i,
+					1 + 2 * (i - 1), -1 + 2 * (i - 1), 2 * i,
+					model_cell.c_str());
+			fprintf(pFileTXT,
+					"+jsc={jscParam} rs={rsParam} rsh={rshParam} temp={temp_cParam} isc_coef={isc_coefParam} n1={n1Param} n2={n2Param}\n");
+			fprintf(pFileTXT,
+					"+cellthickness={cellthicknessParam} mobilitylifetime={mobilitylifetimeParam} vbi={vbiParam} abishop={abishopParam} vbr={vbrParam} mbishop={mbishopParam}\n");
+		}
+
+	}
+
+	fprintf(pFileTXT,".PARAM areaParam=%e j0Param=%e j02Param=%e\n",area_cm2,j_0,j_02);
+	fprintf(pFileTXT,"+jscParam=%e rsParam=%e rshParam=%e temp_cParam=%e isc_coefParam=%e n1Param=%e n2Param=%e\n",jsc, rs, rsh, temp_c, isc_coef, n1, n2);
+	fprintf(pFileTXT,"+cellthicknessParam=%e mobilitylifetimeParam=%e vbiParam=%e abishopParam=%e vbrParam=%e mbishopParam=%e\n\n",iLayerThicknessCm, mobilityLifetimeEff, Vbi, a_bishop, Vbr, m_bishop);
+	//END OF CODE GOOD FOR SETTING IDENTICAL PARAMETERS FOR EACH CELL
+
+
+	for (int i = 1; i <= num_cells_total; i++) {
+		if (i == num_cells_total) {
+			fprintf(pFileTXT, "virrad%d %d 0 dc %e\n", i, 2 * i,
+					fluxTransmitted[i - 1]);
+		} else {
+			fprintf(pFileTXT, "virrad%d %d %d dc %e\n", i, 2 * i,
+					1 + 2 * (i - 1), fluxTransmitted[i - 1]);
+		}
+
+	}
+
+	if (has1BypassDiodePerString) {
+		fprintf(pFileTXT, "\n*bypass diodes\n");
+		//fprintf(pFileTXT, "dbypass1 %d -1 diode\n", 1 + int(ceil(num_cells_total / 2)));
+		//fprintf(pFileTXT, "dbypass2 0 %d diode\n", 1 + int(floor(num_cells_total / 2)));
+		for(int stringNum=1;stringNum<=PSI_NUM_STRINGS_PER_PANEL*PANELS_IN_ARRAY;stringNum++){
+//			if(stringNum==1) fprintf(pFileTXT, "dbypass%d %d -1 diode\n",stringNum, 1 + stringNum*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL));
+//			else if(stringNum==PSI_NUM_STRINGS_PER_PANEL*PANELS_IN_ARRAY) fprintf(pFileTXT, "dbypass%d 0 %d diode\n",stringNum, 1 + (stringNum-1)*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL));
+//			else fprintf(pFileTXT, "dbypass%d %d %d diode\n",stringNum, 1 + stringNum*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL),1 + (stringNum-1)*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL));
+			if(stringNum==1) fprintf(pFileTXT, "dbypass%d %d -1 diode\n",stringNum, 1 + stringNum*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL)-2);
+			else if(stringNum==PSI_NUM_STRINGS_PER_PANEL*PANELS_IN_ARRAY) fprintf(pFileTXT, "dbypass%d 0 %d diode\n",stringNum, 1 + (stringNum-1)*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL)-2);
+			else fprintf(pFileTXT, "dbypass%d %d %d diode\n",stringNum, 1 + stringNum*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL),1 + (stringNum-1)*(num_cells_total/PANELS_IN_ARRAY*2/PSI_NUM_STRINGS_PER_PANEL)-2);
+		}
+		fprintf(pFileTXT, ".model diode d(is=%e n=%e)\n", is_bypass, n_bypass);
+
+	}
+	fprintf(pFileTXT, "\n");
+
+	if(!USE_RVAR){
+	if(SAVEALLSPICEVARIABLES){
+			fprintf(pFileTXT, "*.save i(vbias)\n");
+			} else { //ONLY SAVE I(VBIAS)
+				fprintf(pFileTXT, ".save i(vbias)\n");
+			}
+		}
+	if(USE_RVAR){
+		fprintf(pFileTXT, "\nrvar -1 0 {rvar}\n");
+		fprintf(pFileTXT, ".step dec param rvar 1e-3 1e3 50\n");
+		fprintf(pFileTXT, ".op\n");
+	} else{
+	fprintf(pFileTXT, "\nvbias -1 0 dc 0\n");
+	fprintf(pFileTXT, ".plot dc i(vbias)\n");
+	fprintf(pFileTXT, ".dc vbias %e %e %e\n", vbias_start, vbias_end,
+	vbias_increment);
+	}
+	fprintf(pFileTXT, ".temp %e\n", temp_c);
+	fprintf(pFileTXT, ".probe\n");
+	fprintf(pFileTXT, ".end\n");
+
+	fclose(pFileTXT);
+
+	if (CALIBRATION) BACKUPSPICEFILES=1;
+}
